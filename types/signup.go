@@ -5,7 +5,7 @@ import "time"
 // Request body for signup
 type SignupRequest struct {
 	Name     string `json:"name"`
-	Email    string `json:"rmail"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 

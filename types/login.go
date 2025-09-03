@@ -2,7 +2,7 @@ package types
 
 // Request body for Login
 type LoginRequest struct {
-	Email    string `json:"rmail"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
