@@ -16,7 +16,7 @@ func EncodeError(w http.ResponseWriter, statusCode int, Content string) {
 }
 
 // checks for env values if not present returns fallback
-func GetEnv(key, fallback string) string {
+func GetEnv(key string, fallback any) any {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}

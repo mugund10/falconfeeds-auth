@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/mugund10/falconfeeds-auth/storage"
 )
@@ -21,9 +22,20 @@ func Newserver(listenAddress string, store storage.UserStorer) *Server {
 
 // starts and registers servers routes
 func (s *Server) Start() error {
-	http.HandleFunc("GET  /health", s.handleHealth)
-	http.HandleFunc("POST /signup", s.handleSignup)
-	http.HandleFunc("POST /login", s.handleLogin)
-	http.HandleFunc("GET  /test", s.handleTest)
-	return http.ListenAndServe(s.listenAddr, nil)
+	limiter := SimpleRateLimiter(GetEnv("RATE_PER_MIN", 2).(int), time.Minute)
+	// custom middleware stack
+	mstack := MakeStack(limiter)
+	// custom multiplexer
+	mux := http.NewServeMux()
+	// handler func
+	mux.HandleFunc("GET  /health", s.handleHealth)
+	mux.HandleFunc("POST /signup", s.handleSignup)
+	mux.HandleFunc("POST /login", s.handleLogin)
+	mux.HandleFunc("GET  /test", s.handleTest)
+	// custom server
+	server := http.Server{
+		Addr:    s.listenAddr,
+		Handler: mstack(mux),
+	}
+	return server.ListenAndServe()
 }
