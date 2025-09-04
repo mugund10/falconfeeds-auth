@@ -13,12 +13,29 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// @Summary Health Check
+// @Description Returns OK if the service is running
+// @Tags Health
+// @Produce plain
+// @Success 200 {string} string "OK"
+// @Router /health [get]
 // handler which simply writes ok to the response
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
+// @Summary Signup
+// @Description Register a new user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param signup body types.SignupRequest true "Signup Request"
+// @Success 201 {object} types.User
+// @Failure 400 {string} string "invalid json or validation error"
+// @Failure 409 {string} string "user already exists"
+// @Failure 500 {string} string "internal server error"
+// @Router /signup [post]
 // handler for signup
 func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 	// context for db
@@ -62,6 +79,17 @@ func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// @Summary Login
+// @Description Login a user and get JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param login body types.LoginRequest true "Login Request"
+// @Success 200 {object} types.LoginResponse
+// @Failure 400 {string} string "invalid json or validation error"
+// @Failure 401 {string} string "invalid email or password"
+// @Failure 500 {string} string "internal server error"
+// @Router /login [post]
 // handler for login
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// context for db
@@ -108,6 +136,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Test Endpoint
+// @Description Protected route to verify JWT token
+// @Tags Test
+// @Produce json
+// @Param Authorization header string true "Bearer {token}"
+// @Success 200 {object} map[string]string
+// @Failure 401 {string} string "missing or invalid token"
+// @Router /test [get]
 // handler for test
 func (s *Server) handleTest(w http.ResponseWriter, r *http.Request) {
 	// parsing token from header

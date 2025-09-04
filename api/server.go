@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	_ "github.com/mugund10/falconfeeds-auth/docs"
 	"github.com/mugund10/falconfeeds-auth/storage"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Server struct {
@@ -32,6 +34,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("POST /signup", s.handleSignup)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET  /test", s.handleTest)
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 	// custom server
 	server := http.Server{
 		Addr:    s.listenAddr,
