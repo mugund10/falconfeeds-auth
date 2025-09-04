@@ -8,6 +8,6 @@ import (
 
 // standard db interface for user persistence
 type UserStorer interface {
-	Insert(context.Context, types.User)
-	GetByEmail(context.Context, string) (types.User, error)
+	Insert(context.Context, *types.User) error
+	GetByEmail(context.Context, string) (*types.User, error)
 }
