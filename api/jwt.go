@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("Mugund10TEST")
+var jwtKey = []byte(GetEnv("JWT_SECRET", "Mugund10TEST").(string))
 
 // a custom claim
 type jWT struct {
