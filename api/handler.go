@@ -1,13 +1,16 @@
 package api
 
 import (
-	"fmt"
+	"context"
+	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"encoding/json"
 
 	"github.com/mugund10/falconfeeds-auth/types"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // handler which simply writes ok to the response
@@ -18,6 +21,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // handler for signup
 func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
+	// context for db
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	// validating json fields
 	var sr types.SignupRequest
 	dec := json.NewDecoder(r.Body)
@@ -32,33 +38,101 @@ func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// checking user with same email id
-	// if _, err := s.store.GetByEmail(context.TODO(), sr.Email); err == nil {
-	// 	EncodeError(w, http.StatusConflict, "user already exists")
-	// 	return
-	// }
-	// todo : create a method for or generating a user
-	// var user types.User
-	//storing user details to db
-	// if err := s.store.Insert(context.TODO(), user); err != nil {
-	// 	EncodeError(w, http.StatusInternalServerError, "user cant be created at this time")
-	// }
-	tt := time.Now().UTC()
+	if _, err := s.store.GetByEmail(ctx, sr.Email); err == nil {
+		EncodeError(w, http.StatusConflict, "user already exists")
+		return
+	} else if !errors.Is(err, mongo.ErrNoDocuments) {
+		EncodeError(w, http.StatusInternalServerError, "unable to connect to database")
+		return
+	}
+	// 	storing user details to db
+	user, err := types.NewUser(sr.Name, sr.Email, sr.Password)
+	if err != nil {
+		EncodeError(w, http.StatusInternalServerError, "user cant be created at this time")
+		return
+	}
+	if err := s.store.Insert(ctx, user); err != nil {
+		EncodeError(w, http.StatusInternalServerError, "user cant be created at this time")
+		log.Println(err)
+		return
+	}
+	// response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(types.SignupResponse{Id: "10", Name: sr.Name, Email: sr.Email, CreatedAt: tt})
-
-	fmt.Printf("%+v\n", sr)
+	json.NewEncoder(w).Encode(user)
 }
 
 // handler for login
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	// context for db
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// validating json fields
+	var lr types.LoginRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&lr); err != nil {
+		EncodeError(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	// validating json contents
+	if err := lr.Validate(); err != nil {
+		EncodeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// finds user by email
+	user, err := s.store.GetByEmail(ctx, lr.Email)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			EncodeError(w, http.StatusUnauthorized, "invalid email or password")
+		} else {
+			EncodeError(w, http.StatusInternalServerError, "unable to connect to database")
+		}
+		return
+	}
+	// checks password
+	if !user.ValidatePass(lr.Password) {
+		EncodeError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+	token, err := NewJwt(user.ID.Hex(), user.Email).Sign()
+	if err != nil {
+		EncodeError(w, http.StatusInternalServerError, "failed to generate token")
+		return
+	}
+	// response
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	json.NewEncoder(w).Encode(types.LoginResponse{
+		Token: token,
+	})
 }
 
-// encodes error to responsewriter
-func EncodeError(w http.ResponseWriter, statusCode int, Content string) {
+// handler for test
+func (s *Server) handleTest(w http.ResponseWriter, r *http.Request) {
+	// parsing token from header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		EncodeError(w, http.StatusUnauthorized, "missing token")
+		return
+	}
+	const prefix = "Bearer "
+	if len(authHeader) <= len(prefix) || authHeader[:len(prefix)] != prefix {
+		EncodeError(w, http.StatusUnauthorized, "invalid token format")
+		return
+	}
+	tokenStr := authHeader[len(prefix):]
+	// validating token
+	claims, err := ValidateToken(tokenStr)
+	if err != nil {
+		EncodeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	// response
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(types.ErrorResponse{Error: Content})
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "You are allowed",
+		"userID":  claims.ID,
+		"email":   claims.Email,
+	})
 }

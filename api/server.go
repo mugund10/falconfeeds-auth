@@ -24,5 +24,6 @@ func (s *Server) Start() error {
 	http.HandleFunc("GET  /health", s.handleHealth)
 	http.HandleFunc("POST /signup", s.handleSignup)
 	http.HandleFunc("POST /login", s.handleLogin)
+	http.HandleFunc("GET  /test", s.handleTest)
 	return http.ListenAndServe(s.listenAddr, nil)
 }
