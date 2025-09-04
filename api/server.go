@@ -22,7 +22,7 @@ func Newserver(listenAddress string, store storage.UserStorer) *Server {
 
 // starts and registers servers routes
 func (s *Server) Start() error {
-	limiter := SimpleRateLimiter(GetEnv("RATE_PER_MIN", 2).(int), time.Minute)
+	limiter := SimpleRateLimiter(GetEnv("RATE_PER_MIN", 60).(int), time.Minute)
 	// custom middleware stack
 	mstack := MakeStack(limiter)
 	// custom multiplexer

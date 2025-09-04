@@ -11,9 +11,9 @@ import (
 
 func main() {
 	// config init
-	listenAddress := api.GetEnv("LIS_ADDR", "0.0.0.0:8080")
-	dbAddress := api.GetEnv("DB_ADDR", "mongodb://localhost:27017")
-	dbName := api.GetEnv("DB_NAME", "ff")
+	listenAddress := api.GetEnv("LIS_ADDR", "0.0.0.0:8080").(string)
+	dbAddress := api.GetEnv("DB_ADDR", "mongodb://localhost:27017").(string)
+	dbName := api.GetEnv("DB_NAME", "ff").(string)
 
 	// db init
 	ops := options.Client().ApplyURI(dbAddress)
