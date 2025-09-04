@@ -33,7 +33,7 @@ func (srq *SignupRequest) Validate() error {
 	// checks whether its in the mail format
 	_, err := mail.ParseAddress(srq.Email)
 	if err != nil {
-		return fmt.Errorf("not a valid email address %s", err)
+		return fmt.Errorf("invalid email address")
 	}
 	// checks whether the username or password is blank
 	if len(srq.Name) < 4 || len(srq.Password) < 8 {
